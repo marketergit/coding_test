@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LLM Chat Copilot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white shadow p-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-gray-800">LLM Chat Copilot</h1>
+      <button
+        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        onclick="openSettingsModal()"
+      >
+        Settings
+      </button>
+    </header>
+
+    <!-- Chat Container -->
+    <main class="flex-grow p-6 overflow-auto">
+      <div id="chat-box" class="space-y-4">
+        <!-- Chat messages will be appended here -->
+      </div>
+    </main>
+
+    <!-- Input Box -->
+    <footer class="bg-white p-4 flex items-center gap-4 shadow-inner">
+      <input
+        id="user-input"
+        type="text"
+        class="flex-grow border border-gray-300 rounded p-2"
+        placeholder="Ask me anything..."
+        onkeydown="if(event.key === 'Enter') sendMessage()"
+      />
+      <button
+        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+        onclick="sendMessage()"
+      >
+        Send
+      </button>
+    </footer>
+  </div>
+
+  <!-- Settings Modal -->
+  <div
+    id="settings-modal"
+    class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center"
+  >
+    <div class="bg-white p-6 rounded shadow-lg w-96">
+      <h2 class="text-xl font-bold mb-4">Settings</h2>
+      <label class="block mb-2">
+        API Key:
+        <input
+          type="password"
+          id="api-key"
+          class="w-full border border-gray-300 p-2 rounded mt-1"
+        />
+      </label>
+      <div class="mt-4 flex justify-end gap-2">
+        <button
+          class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
+          onclick="closeSettingsModal()"
+        >
+          Cancel
+        </button>
+        <button
+          class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+          onclick="saveSettings()"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openSettingsModal() {
+      document.getElementById("settings-modal").classList.remove("hidden");
+      document.getElementById("settings-modal").classList.add("flex");
+    }
+
+    function closeSettingsModal() {
+      document.getElementById("settings-modal").classList.remove("flex");
+      document.getElementById("settings-modal").classList.add("hidden");
+    }
+
+    function saveSettings() {
+      const apiKey = document.getElementById("api-key").value;
+      localStorage.setItem("apiKey", apiKey);
+      closeSettingsModal();
+    }
+
+    function addUserMessage(message) {
+      const chatBox = document.getElementById("chat-box");
+      const userMessage = document.createElement("div");
+      userMessage.className = "text-right";
+      userMessage.innerHTML = `
+        <div class="inline-block bg-blue-100 text-blue-800 p-2 rounded">
+          ${message}
+        </div>
+      `;
+      chatBox.appendChild(userMessage);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function addAIMessage(message) {
+      const chatBox = document.getElementById("chat-box");
+      const aiMessage = document.createElement("div");
+      aiMessage.className = "text-left";
+      aiMessage.innerHTML = `
+        <div class="inline-block bg-gray-200 text-gray-800 p-2 rounded">
+          ${message}
+        </div>
+      `;
+      chatBox.appendChild(aiMessage);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("user-input");
+      const message = input.value.trim();
+      if (message) {
+        addUserMessage(message);
+        input.value = "";
+        generateAIResponse(message);
+      }
+    }
+
+    async function generateAIResponse(userMessage) {
+      try {
+        addAIMessage("Typing..."); // Show loading indicator
+        const response = await fetch(fetch("http://127.0.0.1:5000/api/generate"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ message: userMessage }),
+        });
+
+        const data = await response.json();
+        // Remove "Typing..." message
+        const chatBox = document.getElementById("chat-box");
+        chatBox.lastChild.remove();
+
+        addAIMessage(data.reply || "No response received.");
+      } catch (error) {
+        console.error("Error fetching AI response:", error);
+        addAIMessage("Error fetching response. Please try again.");
+      }
+    }
+  </script>
+</body>
+</html>
