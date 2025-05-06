@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+        }
+        .chat-container {
+            height: calc(100vh - 180px);
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes blink {
+            0% { opacity: 0.1; }
+            20% { opacity: 1; }
+            100% { opacity: 0.1; }
+        }
+        .message {
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .ai-thinking {
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+            background-size: 200% 200%;
+            animation: gradient 2s ease infinite;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 py-4 px-6 flex items-center justify-between">
+        <div class="flex items-center">
+            <div class="h-8 w-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <h1 class="ml-3 text-xl font-semibold text-gray-800">AI Assistant</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button id="clear-chat" class="text-gray-500 hover:text-gray-700 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </button>
+            <button id="settings-btn" class="text-gray-500 hover:text-gray-700 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Chat Area -->
+    <div class="flex-1 overflow-hidden">
+        <div id="chat-container" class="chat-container p-6 space-y-6">
+            <!-- Welcome Message -->
+            <div class="message show flex items-start">
+                <div class="h-8 w-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <div class="ml-4 bg-white rounded-lg p-4 shadow-sm max-w-3xl">
+                    <p class="text-gray-800">Hello! I'm your AI assistant. How can I help you today?</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button class="suggestion-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm transition">Write an email</button>
+                        <button class="suggestion-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm transition">Summarize a document</button>
+                        <button class="suggestion-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm transition">Generate ideas</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="bg-white border-t border-gray-200 p-4">
+        <div class="max-w-4xl mx-auto">
+            <form id="chat-form" class="flex items-end gap-3">
+                <div class="relative flex-grow">
+                    <textarea id="user-input" rows="1" class="w-full border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none" placeholder="Message AI Assistant..."></textarea>
+                    <button type="button" id="attachment-btn" class="absolute bottom-3 right-3 text-gray-400 hover:text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                    </button>
+                </div>
+                <button type="submit" class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg p-3 hover:opacity-90 transition shadow-sm flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" transform="rotate(90 12 12)" />
+                    </svg>
+                </button>
+            </form>
+            <div class="text-xs text-gray-500 mt-2 text-center">
+                AI Assistant may produce inaccurate information about people, places, or facts.
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Settings</h2>
+                <button id="close-settings" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">AI Model</label>
+                    <select class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option>GPT-4</option>
+                        <option>GPT-3.5</option>
+                        <option>Claude</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Theme</label>
+                    <div class="flex space-x-3">
+                        <button class="theme-btn w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 ring-2 ring-offset-2 ring-indigo-500"></button>
+                        <button class="theme-btn w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-teal-400"></button>
+                        <button class="theme-btn w-8 h-8 rounded-full bg-gradient-to-r from-rose-500 to-orange-400"></button>
+                        <button class="theme-btn w-8 h-8 rounded-full bg-gray-800"></button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-700">Dark Mode</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Response Length</label>
+                    <input type="range" min="1" max="5" value="3" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Concise</span>
+                        <span>Balanced</span>
+                        <span>Detailed</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6">
+                <button class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatForm = document.getElementById('chat-form');
+            const userInput = document.getElementById('user-input');
+            const chatContainer = document.getElementById('chat-container');
+            const clearChatBtn = document.getElementById('clear-chat');
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsModal = document.getElementById('settings-modal');
+            const closeSettingsBtn = document.getElementById('close-settings');
+            const suggestionBtns = document.querySelectorAll('.suggestion-btn');
+
+            // Auto-resize textarea
+            userInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                if (this.scrollHeight > 200) {
+                    this.style.height = '200px';
+                    this.style.overflowY = 'auto';
+                } else {
+                    this.style.overflowY = 'hidden';
+                }
+            });
+
+            // Handle form submission
+            chatForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const message = userInput.value.trim();
+                if (message) {
+                    addUserMessage(message);
+                    userInput.value = '';
+                    userInput.style.height = 'auto';
+                    setTimeout(() => {
+                        generateAIResponse(message);
+                    }, 500);
+                }
+            });
+
+            // Handle suggestion buttons
+            suggestionBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const message = this.textContent;
+                    addUserMessage(message);
+                    setTimeout(() => {
+                        generateAIResponse(message);
+                    }, 500);
+                });
+            });
+
+            // Clear chat
+            clearChatBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear the chat history?')) {
+                    chatContainer.innerHTML = '';
+                    // Add welcome message back
+                    const welcomeMessage = document.createElement('div');
+                    welcomeMessage.className = 'message show flex items-start';
+                    welcomeMessage.innerHTML = `
+                        <div class="h-8 w-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <div class="ml-4 bg-white rounded-lg p-4 shadow-sm max-w-3xl">
+                            <p class="text-gray-800">Hello! I'm your AI assistant. How can I help you today?</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button class="suggestion-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm transition">Write an email</button>
+                                <button class="suggestion-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm transition">Summarize a document</button>
+                                <button class="suggestion-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm transition">Generate ideas</button>
+                            </div>
+                        </div>
+                    `;
+                    chatContainer.appendChild(welcomeMessage);
+                    
+                    // Reattach event listeners to new suggestion buttons
+                    const newSuggestionBtns = welcomeMessage.querySelectorAll('.suggestion-btn');
+                    newSuggestionBtns.forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const message = this.textContent;
+                            addUserMessage(message);
+                            setTimeout(() => {
+                                generateAIResponse(message);
+                            }, 500);
+                        });
+                    });
+                }
+            });
+
+            // Settings modal
+            settingsBtn.addEventListener('click', function() {
+                settingsModal.classList.remove('hidden');
+            });
+
+            closeSettingsBtn.addEventListener('click', function() {
+                settingsModal.classList.add('hidden');
+            });
+
+            // Close modal when clicking outside
+            settingsModal.addEventListener('click', function(e) {
+                if (e.target === settingsModal) {
+                    settingsModal.classList.add('hidden');
+                }
+            });
+
+            // Add user message to chat
+            function addUserMessage(message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message flex items-start justify-end';
+                messageDiv.innerHTML = `
+                    <div class="mr-4 bg-indigo-100 rounded-lg p-4 shadow-sm max-w-3xl">
+                        <p class="text-gray-800">${escapeHTML(message)}</p>
+                    </div>
+                    <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                `;
+                chatContainer.appendChild(messageDiv);
+                setTimeout(() => {
+                    messageDiv.classList.add('show');
+                }, 10);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            // Generate AI response
+            function generateAIResponse(userMessage) {
+                // Add thinking indicator
+                const thinkingDiv = document.createElement('div');
+                thinkingDiv.className = 'message flex items-start';
+                thinkingDiv.innerHTML = `
+                    <div class="h-8 w-8 rounded-full ai-thinking flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <div class="ml-4 bg-white rounded-lg p-3 shadow-sm">
+                        <div class="typing-indicator flex space-x-1">
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                        </div>
+                    </div>
+                `;
+                chatContainer.appendChild(thinkingDiv);
+                setTimeout(() => {
+                    thinkingDiv.classList.add('show');
+                }, 10);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                // Make POST request to backend
+                fetch("http://127.0.0.1:5000/api/generate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message: userMessage })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Remove thinking indicator
+                    chatContainer.removeChild(thinkingDiv);
+
+                    const response = data.reply;
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'message flex items-start';
+                    messageDiv.innerHTML = `
+                        <div class="h-8 w-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <div class="ml-4 bg-white rounded-lg p-4 shadow-sm max-w-3xl">
+                            <p class="text-gray-800">${escapeHTML(response)}</p>
+                        </div>
+                    `;
+                    chatContainer.appendChild(messageDiv);
+                    setTimeout(() => {
+                        messageDiv.classList.add('show');
+                    }, 10);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                })
+                .catch(error => {
+                    chatContainer.removeChild(thinkingDiv);
+                    alert("Error: Could not get response from AI.");
+                    console.error("Error from backend:", error);
+                });
+            }
+
+
+            // Helper function to escape HTML
+            function escapeHTML(str) {
+                return str.replace(/[&<>'"]/g, 
+                    tag => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        "'": '&#39;',
+                        '"': '&quot;'
+                    }[tag]));
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93b65d4c06b7936e',t:'MTc0NjUxMjM1MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>
+
+</script>
+</html>
